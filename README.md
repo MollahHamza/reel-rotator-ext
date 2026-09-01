@@ -1,14 +1,10 @@
 # Instagram Reel Rotator 🔄
 
-A Chrome extension that lets you rotate landscape Instagram Reels on desktop — just like rotating your phone.
+A Chrome extension that lets you rotate and focus landscape Instagram Reels on desktop — just like rotating your phone.
 
 ## The Problem
 
 Landscape videos on Instagram Reels look tiny and sideways on desktop. You can't rotate your monitor like you'd rotate your phone.
-
-## The Fix
-
-Click the ↻ button (or press `R`) to rotate the video 90° at a time. Scroll to the next reel and it resets automatically.
 
 ## Install
 
@@ -21,13 +17,13 @@ Click the ↻ button (or press `R`) to rotate the video 90° at a time. Scroll t
 
 ## Usage
 
-| Action | How |
-|--------|-----|
-| Rotate | Click the ↻ button or press `R` |
-| Keep rotating | Click again (90° → 180° → 270° → 0°) |
-| Reset | Scroll to next reel (auto) or rotate back to 0° |
+| Key | Action |
+|-----|--------|
+| `R` | Rotate video 90° counter-clockwise |
+| `F` | Focus mode — video goes fullscreen with dark backdrop |
+| `Esc`,  `F` | Exit focus mode |
 
-## License
+You can also click the ↻ button at the bottom-right, or click the dark backdrop to exit focus mode.
 
-MIT
-# reel-rotator-ext
+Scrolling to the next reel resets everything automatically.
+

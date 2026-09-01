@@ -200,10 +200,10 @@
       focusBackdrop.classList.add('active');
     });
 
-    // Calculate the video size to fill the screen with padding
-    const padding = 24;
-    const availW = window.innerWidth - padding * 2;
-    const availH = window.innerHeight - padding * 2;
+    // Calculate nice margins so the video has comfortable padding all around
+    const marginRatio = 0.85; // takes ~85% of screen
+    const maxW = window.innerWidth * marginRatio;
+    const maxH = window.innerHeight * marginRatio;
 
     // Apply focus styles to the video
     video.style.position = 'fixed';
@@ -211,32 +211,29 @@
     video.style.objectFit = 'contain';
     video.style.transition = 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
     video.style.transformOrigin = 'center center';
+    video.style.margin = '0';
+    video.style.maxWidth = 'none';
+    video.style.maxHeight = 'none';
+    video.style.borderRadius = '12px';
+    video.style.boxShadow = '0 20px 50px rgba(0, 0, 0, 0.5)';
 
     const absRot = Math.abs(currentRotation);
     if (absRot === 90 || absRot === 270) {
-      // Rotated: size the element so the rotated result fits in available area
-      const elemW = Math.min(availH, availW);
-      const elemH = Math.min(availW, availH);
-      video.style.width = elemW + 'px';
-      video.style.height = elemH + 'px';
+      // Swapped dimensions constrained to 85% viewport box
+      video.style.width = maxH + 'px';
+      video.style.height = maxW + 'px';
       video.style.top = '50%';
       video.style.left = '50%';
-      video.style.margin = '0';
       video.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`;
-      video.style.maxWidth = 'none';
-      video.style.maxHeight = 'none';
     } else {
-      video.style.top = padding + 'px';
-      video.style.left = padding + 'px';
-      video.style.width = availW + 'px';
-      video.style.height = availH + 'px';
-      video.style.margin = '0';
-      video.style.maxWidth = 'none';
-      video.style.maxHeight = 'none';
-      if (currentRotation === 180) {
-        video.style.transform = 'rotate(180deg)';
+      video.style.top = '50%';
+      video.style.left = '50%';
+      video.style.width = maxW + 'px';
+      video.style.height = maxH + 'px';
+      if (currentRotation === 180 || currentRotation === -180) {
+        video.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`;
       } else {
-        video.style.transform = 'none';
+        video.style.transform = 'translate(-50%, -50%)';
       }
     }
 
