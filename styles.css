@@ -67,3 +67,35 @@
 #reel-rotate-btn.rotated .degree-badge {
   display: block;
 }
+
+/* ─── Focus Mode Backdrop ────────────────────────────────── */
+
+#reel-focus-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999999;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition: all 0.35s ease;
+  cursor: pointer;
+}
+
+#reel-focus-backdrop.active {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Button state when focus mode is active */
+#reel-rotate-btn.focus-active {
+  background: rgba(234, 179, 8, 0.8);
+  border-color: rgba(253, 224, 71, 0.6);
+}
+
+#reel-rotate-btn.focus-active:hover {
+  background: rgba(234, 179, 8, 0.95);
+}
