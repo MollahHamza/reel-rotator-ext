@@ -1,0 +1,69 @@
+
+#reel-rotate-btn {
+  position: fixed;
+  bottom: 120px;
+  right: 32px;
+  z-index: 999999;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.65);
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  display: none; /* hidden until on reels page */
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  padding: 0;
+  line-height: 1;
+  user-select: none;
+}
+
+#reel-rotate-btn.visible {
+  display: flex;
+}
+
+#reel-rotate-btn:hover {
+  background: rgba(0, 0, 0, 0.85);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+#reel-rotate-btn:active {
+  transform: scale(0.95);
+}
+
+#reel-rotate-btn.rotated {
+  background: rgba(59, 130, 246, 0.8);
+  border-color: rgba(147, 197, 253, 0.6);
+}
+
+#reel-rotate-btn.rotated:hover {
+  background: rgba(59, 130, 246, 0.95);
+}
+
+/* Rotation degree indicator badge */
+#reel-rotate-btn .degree-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 1px 4px;
+  line-height: 1.3;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  display: none;
+}
+
+#reel-rotate-btn.rotated .degree-badge {
+  display: block;
+}
