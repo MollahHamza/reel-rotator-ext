@@ -22,8 +22,11 @@ Landscape videos on Instagram Reels look tiny and sideways on desktop. You can't
 | `R` | Rotate video 90° counter-clockwise |
 | `F` | Focus mode — video goes fullscreen with dark backdrop |
 | `Esc`,  `F` | Exit focus mode |
+| `W` / `S` | Previous / next reel — **while in focus mode** |
 
 You can also click the ↻ button at the bottom-right, or click the dark backdrop to exit focus mode.
 
-Scrolling to the next reel resets everything automatically.
+In focus mode you can also scroll with the trackpad or mouse wheel to move between reels — you stay in focus mode instead of being kicked out. One scroll gesture moves one reel, and your rotation carries over to the next one.
+
+Outside focus mode, scrolling to the next reel resets rotation automatically.
 

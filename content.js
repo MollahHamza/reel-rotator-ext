@@ -16,6 +16,14 @@
   let focusSavedStyles = {};
   let focusOverflowMods = [];
 
+  // ─── Focus-Mode Scrolling State ───────────────────────────────────
+  let focusNavigating = false;      // a reel change is in flight
+  let wheelAccum = 0;               // trackpad deltas pile up here
+  let wheelResetTimer = null;
+  let lastNavTime = 0;
+  const WHEEL_THRESHOLD = 40;       // deltaY units before we commit to a move
+  const NAV_COOLDOWN = 550;         // ms between reel changes
+
   function createButton() {
     if (document.getElementById('reel-rotate-btn')) {
       btn = document.getElementById('reel-rotate-btn');
@@ -162,8 +170,27 @@
     const video = rotatedVideo || findActiveVideo();
     if (!video) return;
 
-    focusedVideo = video;
     focusMode = true;
+
+    // Create dark blurred backdrop
+    focusBackdrop = document.createElement('div');
+    focusBackdrop.id = 'reel-focus-backdrop';
+    focusBackdrop.addEventListener('click', exitFocusMode);
+    document.body.appendChild(focusBackdrop);
+
+    // Force-trigger the backdrop animation
+    requestAnimationFrame(() => {
+      if (focusBackdrop) focusBackdrop.classList.add('active');
+    });
+
+    applyFocusStyles(video);
+
+    if (btn) btn.classList.add('focus-active');
+  }
+
+  // Lifts one video out of the feed and centers it over the backdrop.
+  function applyFocusStyles(video) {
+    focusedVideo = video;
 
     // Save original styles
     focusSavedStyles = {
@@ -180,25 +207,16 @@
       transform: video.style.transform,
       transition: video.style.transition,
       transformOrigin: video.style.transformOrigin,
+      borderRadius: video.style.borderRadius,
+      boxShadow: video.style.boxShadow,
     };
 
     // Save original DOM position so we can put it back
     focusSavedStyles._origParent = video.parentElement;
     focusSavedStyles._origNextSibling = video.nextSibling;
 
-    // Create dark blurred backdrop
-    focusBackdrop = document.createElement('div');
-    focusBackdrop.id = 'reel-focus-backdrop';
-    focusBackdrop.addEventListener('click', exitFocusMode);
-    document.body.appendChild(focusBackdrop);
-
     // Move video to body so it's above the backdrop (escapes parent stacking contexts)
     document.body.appendChild(video);
-
-    // Force-trigger the backdrop animation
-    requestAnimationFrame(() => {
-      focusBackdrop.classList.add('active');
-    });
 
     // Calculate nice margins so the video has comfortable padding all around
     const marginRatio = 0.85; // takes ~85% of screen
@@ -236,14 +254,13 @@
         video.style.transform = 'translate(-50%, -50%)';
       }
     }
-
-    if (btn) btn.classList.add('focus-active');
   }
 
-  function exitFocusMode() {
-    if (!focusMode || !focusedVideo) return;
-
+  // Puts the focused video back where it came from, styles and all.
+  // Leaves focusMode/backdrop untouched so navigation can reuse them.
+  function restoreVideoFromFocus() {
     const video = focusedVideo;
+    if (!video) return;
 
     // Restore original styles
     for (const [key, value] of Object.entries(focusSavedStyles)) {
@@ -251,15 +268,37 @@
       video.style[key] = value;
     }
 
-    // Move video back to its original DOM position
+    // Move video back to its original DOM position — but only if that spot
+    // still exists; Instagram recycles reel nodes while we hold the video.
     const origParent = focusSavedStyles._origParent;
     const origNext = focusSavedStyles._origNextSibling;
-    if (origParent) {
+    if (origParent && document.contains(origParent)) {
       if (origNext && origNext.parentElement === origParent) {
         origParent.insertBefore(video, origNext);
       } else {
         origParent.appendChild(video);
       }
+    } else if (video.parentElement === document.body) {
+      video.remove();
+    }
+
+    focusedVideo = null;
+    focusSavedStyles = {};
+  }
+
+  function exitFocusMode() {
+    // No focusedVideo check: mid-navigation the video is already back in the
+    // feed, and the backdrop still needs tearing down.
+    if (!focusMode) return;
+
+    const video = focusedVideo;
+
+    restoreVideoFromFocus();
+
+    // A reel we rotated by inheritance never went through applyRotation, so
+    // its restored transform is empty. Re-apply so the feed matches the badge.
+    if (video && video === rotatedVideo && currentRotation !== 0 && !video.style.transform) {
+      applyRotation(video, currentRotation);
     }
 
     // Remove backdrop
@@ -274,10 +313,128 @@
     }
 
     focusMode = false;
-    focusedVideo = null;
-    focusSavedStyles = {};
+    focusNavigating = false;
+    wheelAccum = 0;
 
     if (btn) btn.classList.remove('focus-active');
+  }
+
+  // ─── Scrolling Inside Focus Mode ──────────────────────────────────
+
+  // direction: 1 = next reel (down/S), -1 = previous reel (up/W)
+  function focusNavigate(direction) {
+    if (!focusMode || focusNavigating) return;
+
+    const now = Date.now();
+    if (now - lastNavTime < NAV_COOLDOWN) return;
+    lastNavTime = now;
+
+    focusNavigating = true;
+
+    const prevVideo = focusedVideo;
+
+    // Remember how the user is holding the video; the next reel inherits it.
+    const keptRotation = currentRotation;
+
+    // Drop the video back into the feed so the page can scroll normally, and
+    // strip the rotation off it — the rotation travels with us, not with it.
+    restoreVideoFromFocus();
+    if (rotatedVideo) {
+      resetRotation(rotatedVideo);
+    } else if (prevVideo) {
+      prevVideo.style.transform = '';
+      prevVideo.style.transformOrigin = '';
+      prevVideo.style.objectFit = '';
+    }
+
+    const container = findScrollContainer();
+    const step = (container ? container.clientHeight : window.innerHeight) * direction;
+
+    if (container) {
+      container.scrollBy({ top: step, behavior: 'smooth' });
+    } else {
+      window.scrollBy({ top: step, behavior: 'smooth' });
+    }
+
+    waitForNextVideo(prevVideo, (video) => {
+      focusNavigating = false;
+      if (!focusMode || !video) return;
+
+      // Re-arm the rotation before focusing: applyFocusStyles builds its
+      // transform from currentRotation.
+      if (keptRotation !== 0) {
+        currentRotation = keptRotation;
+        rotatedVideo = video;
+        updateButtonState();
+      }
+
+      applyFocusStyles(video);
+    });
+  }
+
+  // Polls for the reel that scrolling landed on, then hands it back.
+  function waitForNextVideo(prevVideo, done) {
+    const deadline = Date.now() + 1600;
+
+    const poll = () => {
+      if (!focusMode) {
+        done(null);
+        return;
+      }
+
+      const video = findActiveVideo();
+      if (video && video !== prevVideo && document.contains(video)) {
+        const rect = video.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          done(video);
+          return;
+        }
+      }
+
+      if (Date.now() > deadline) {
+        // Nothing new showed up (end of feed, slow load) — re-focus whatever
+        // is on screen so the user is not left staring at a blank backdrop.
+        done(findActiveVideo());
+        return;
+      }
+
+      setTimeout(poll, 100);
+    };
+
+    setTimeout(poll, 250); // let the smooth scroll get going first
+  }
+
+  function handleFocusWheel(e) {
+    if (!focusMode) return;
+
+    // Stop the page from scrolling underneath us; focusNavigate moves it
+    // by exactly one reel instead.
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (focusNavigating) return;
+
+    wheelAccum += e.deltaY;
+
+    // Trackpads fire a long tail of small deltas; forget stale ones so a
+    // slow drift never adds up into an unwanted jump.
+    if (wheelResetTimer) clearTimeout(wheelResetTimer);
+    wheelResetTimer = setTimeout(() => { wheelAccum = 0; }, 200);
+
+    if (Math.abs(wheelAccum) >= WHEEL_THRESHOLD) {
+      const direction = wheelAccum > 0 ? 1 : -1;
+      wheelAccum = 0;
+      focusNavigate(direction);
+    }
+  }
+
+  function setupFocusScroll() {
+    // Capture phase on the document: the backdrop covers the screen, but the
+    // focused video sits above it and would otherwise swallow the event.
+    document.addEventListener('wheel', handleFocusWheel, {
+      capture: true,
+      passive: false,
+    });
   }
 
   function getVideoContainer(video) {
@@ -332,6 +489,7 @@
       if (container) {
         let scrollTimer = null;
         container.addEventListener('scroll', () => {
+          if (focusMode) return; // focus mode drives its own navigation
           if (rotatedVideo) {
             if (scrollTimer) clearTimeout(scrollTimer);
             scrollTimer = setTimeout(resetIfActive, 100);
@@ -353,6 +511,7 @@
   function setupVideoPlayReset() {
     document.addEventListener('play', (e) => {
       if (e.target.tagName === 'VIDEO') {
+        if (focusMode) return; // focus mode drives its own navigation
         if (rotatedVideo && e.target !== rotatedVideo) {
           resetIfActive();
         }
@@ -413,6 +572,12 @@
       } else if (e.key === 'f' || e.key === 'F') {
         e.preventDefault();
         toggleFocusMode();
+      } else if (focusMode && (e.key === 'w' || e.key === 'W')) {
+        e.preventDefault();
+        focusNavigate(-1);
+      } else if (focusMode && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        focusNavigate(1);
       } else if (e.key === 'Escape') {
         if (focusMode) {
           e.preventDefault();
@@ -458,6 +623,7 @@
     setupUrlChangeDetection();
     setupScrollReset();
     setupVideoPlayReset();
+    setupFocusScroll();
 
     toggleButton(isReelsPage());
   }
